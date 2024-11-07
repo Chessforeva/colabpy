@@ -1,6 +1,6 @@
 
 ## Chelpy python library for Google Colab
-v.1.0 nov.2024
+v.1.0 nov.2024, Chessforeva
 
 Written in pure C. Magic bitboards calculations. Performance shoud be really good, but not scalable as GPU cuda tensors or likewise. Just a single thread CPU only.
 
@@ -10,13 +10,14 @@ https://colab.research.google.com/drive/1y8cYkpbHDymLMZ2K9zJNyRhw3mVWEvTj?usp=sh
 Source to clone
 https://github.com/Chessforeva/colabpy
 
-In case, there is no local linux VM.
+In case if there is no local linux VM.
 Upload chelpy.c, u64_chess.h to Google Shell linux and compile .so library for python
     
     gcc chelpy.c -shared -o chelpy.so -I/usr/include/python3.12 -fPIC 
 
+May work also on Anaconda Jupyters or AI Lightnings.
 
-#### Load library
+#### Load library in Colab
 
      #get library from online site
     ! wget 'https://chessforeva.gitlab.io/colab/chelpy.so'
