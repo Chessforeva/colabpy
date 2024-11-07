@@ -19,7 +19,7 @@ May work also on Anaconda Jupyters or AI Lightnings.
 
 #### Load library in Colab
 
-     #get library from online site
+    #get library from online site
     ! wget 'https://chessforeva.gitlab.io/colab/chelpy.so'
     
     import chelpy
