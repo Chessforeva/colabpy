@@ -88,6 +88,8 @@ May work also on Anaconda Jupyters or AI Lightnings.
     for i0 in range(chelpy.i_movegen(0)):
       chelpy.i_domove(0)
     
+      can_escape = True;
+    
       #depth 1 black 1... move
       for i1 in range(chelpy.i_movegen(1)):
         chelpy.i_domove(1)
