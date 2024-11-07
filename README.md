@@ -146,3 +146,22 @@ May work also on Anaconda Jupyters or AI Lightnings.
     # create a file of ucis
     !./pgn2uci chusa24.pgn chusa24_ucis.txt
     
+    
+
+#### Anaconda Jupyter workaround
+
+    #rename chelpy.so to chelpy then file can be uploaded
+    #upload chelpy and refresh folders view
+    #perform commands to make a chelpy.so
+    
+    ! rm chelpy.so
+    ! cp chelpy chelpy.so
+    ! chmod 755 ./chelpy.so
+    ! ls
+    
+    #now it works
+    import chelpy
+    print(chelpy.sboard())
+    
+    
+
