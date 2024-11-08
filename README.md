@@ -1,5 +1,5 @@
 
-## Chelpy python library for Google Colab
+## Chelpy python chess library for Google Colab
 v.1.0 nov.2024, Chessforeva
 
 Written in pure C. Magic bitboards calculations. Performance shoud be really good, but not scalable as GPU cuda tensors or likewise. Just a single thread CPU only.
