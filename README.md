@@ -19,7 +19,7 @@ May work also on Anaconda Jupyters or AI Lightnings.
 
 #### Load library in Colab
 
-    #get library from online site
+    # get library from online site
     ! wget 'https://chessforeva.gitlab.io/colab/chelpy.so'
     
     import chelpy
@@ -45,7 +45,8 @@ May work also on Anaconda Jupyters or AI Lightnings.
     print(chelpy.sboard())
     
     #perform move generation
-    chelpy.movegen()
+    n = chelpy.movegen()
+    print(n)
     #get string of legal moves after movegen
     s = chelpy.legalmoves()
     print(s)
@@ -67,9 +68,10 @@ May work also on Anaconda Jupyters or AI Lightnings.
     
     chelpy.undomove()
 
-	# working with a pgn-notated chess game
+    # working with a pgn-notated chess game
     chelpy.setstartpos()
-    chelpy.parsepgn("1.Nf3 Ng8-f6 2.g2g3 e5 3.Bg2 Nc6 4. 0-0 ")
+    ucis_made = chelpy.parsepgn("1.Nf3 Ng8-f6 2.g2g3 e5 3.Bg2 Nc6 4. 0-0 ")
+    print(ucis_made)
     print(chelpy.sboard())
 
 #### Iterations
