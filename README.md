@@ -67,12 +67,22 @@ May work also on Anaconda Jupyters or AI Lightnings.
     print(chelpy.ischeckmate())
     
     chelpy.undomove()
-
+    
     # working with a pgn-notated chess game
     chelpy.setstartpos()
     ucis_made = chelpy.parsepgn("1.Nf3 Ng8-f6 2.g2g3 e5 3.Bg2 Nc6 4. 0-0 ")
     print(ucis_made)
     print(chelpy.sboard())
+    
+    # This version lacks fast C functions to check squares or scan pieces. 
+    # slow square check e1
+    chelpy.setstartpos()
+    s = chelpy.sboard().split('\n')[7][4]
+    print(s)
+    # to move
+    s = chelpy.sboard()[72]
+    print(s)
+    
 
 #### Iterations
 
