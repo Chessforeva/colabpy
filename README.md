@@ -4,16 +4,23 @@ v.1.0 nov.2024, Chessforeva
 
 Written in pure C. Magic bitboards calculations. Performance shoud be really good, but not scalable as GPU cuda tensors or likewise. Just a single thread CPU only.
 
-Notebook:
+Notebook and usage samples:
 https://colab.research.google.com/drive/1y8cYkpbHDymLMZ2K9zJNyRhw3mVWEvTj?usp=sharing
 
 Source to clone
 https://github.com/Chessforeva/colabpy
 
 In case if there is no local linux VM.
-Upload chelpy.c, u64_chess.h to Google Shell linux and compile .so library for python
-    
+Upload chelpy.c, u64_chess.h to Google Shell linux and compile .so library for python.
+
+Obtain include path in python, look for 'include:' property.
+    import sysconfig
+    print( sysconfig.get_paths() )
+
+Compile library.
+
     gcc chelpy.c -shared -o chelpy.so -I/usr/include/python3.12 -fPIC 
+
 
 May work also on Anaconda Jupyters or AI Lightnings.
 
@@ -74,7 +81,6 @@ May work also on Anaconda Jupyters or AI Lightnings.
     print(ucis_made)
     print(chelpy.sboard())
     
-    # This version lacks fast C functions to check squares or scan pieces. 
     # slow square check e1
     chelpy.setstartpos()
     s = chelpy.sboard().split('\n')[7][4]
@@ -83,6 +89,32 @@ May work also on Anaconda Jupyters or AI Lightnings.
     s = chelpy.sboard()[72]
     print(s)
     
+    chelpy.setstartpos()
+    ucis_made = chelpy.parsepgn("1.Nf3 Nc6 2.Rg1 Rb8 3.a2-a4 ")
+    # board into variables (fast)
+    print( chelpy.getboard() )
+    # board castlings possible now (fast)
+    print( chelpy.getcastlings() )
+
+    # get tuple of occupied squares, after movegen()
+    # parameter:
+    #  0 - OCC (all pieces)
+    #  1 - WOCC (whites)
+    #  2 - WOCC (blacks)
+    #  3 - NOCC (free squares = not occupied)
+    #  4 - NWOCC (not whites occupied)
+    #  5 - NBOCC (not blacks occupied)
+    #  6 - EOCC (OCC with en-passant)
+    #  7 - EWOCC (Whites with en-passant)
+    #  8 - EBOCC (Blacks with en-passant)
+    
+    chelpy.setstartpos()
+    chelpy.movegen()
+    chelpy.getoccupancies(7)
+    # Tensor = torch.tensor(tuple)
+
+
+
 
 #### Iterations
 
@@ -138,6 +170,41 @@ May work also on Anaconda Jupyters or AI Lightnings.
         print(mv[i0]);
         break
     
+    # selective iterations
+    # scan 1st.move knight moves only and all black knight moves too
+    
+    chelpy.setstartpos()
+    # depth 0 white 1. move
+    for i0 in range(chelpy.i_movegen(0)):
+    
+      # obtain move information at depth 0
+      # returned values:
+      # piece types =  Q=0,R=1,B=2,N=3,P=4,K=5, q=8,r=9,b=10,n=11,p=12,k=13
+      # promoted pieces = 0=Q,1=R,2=B,3=N
+      # other are various flags of movegen
+    
+      m0 = chelpy.i_moveinfo(0)
+      if(m0['pieceTypeFrom'] == 3):
+        print(m0)
+        chelpy.i_domove(0)
+        #depth 1 black 1... move
+        for i1 in range(chelpy.i_movegen(1)):
+          m1 = chelpy.i_moveinfo(1)
+          if(m1['pieceTypeFrom'] == 11):
+            print(m1)
+            chelpy.i_domove(1)
+            # do something
+            chelpy.undomove()
+          else:
+            # other pawns moves, skip to next move
+            chelpy.i_skipmove(1)
+        
+        chelpy.undomove()
+        
+      else:
+        # other pawns moves
+        chelpy.i_skipmove(0)
+
 
     #see performance
     for i in range(1*1000*1000):

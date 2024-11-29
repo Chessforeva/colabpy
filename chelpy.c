@@ -1,7 +1,7 @@
 /*
 
 	CHELPY.SO
-	v.1.0
+	v.1.2
 
 	This is a python chess library intended for Google Colab.
 		
@@ -35,10 +35,14 @@
 
 char lib_buffer[102400];
 char lib_mv[4<<8];
+int depth;
+int choice;
 
 // freaking iterations
 char lib_ii_mv[(4<<8)*32];
 U8 *lib_ii_po[32];
+
+Py_ssize_t isquares[64];
 
 //------------------------------------------
 //
@@ -192,19 +196,16 @@ void parse_pgn_moves( char *pgn ) {
 //	python interface
 
 PyObject *setstartpos ( PyObject *self, PyObject *args ) {
-	PyArg_ParseTuple( args,  "" );
 	SetStartPos();
 	return Py_BuildValue( "", NULL );
 }
 
 PyObject *sboard ( PyObject *self, PyObject *args ) {
-	PyArg_ParseTuple( args,  "" );
 	sBoard( lib_buffer );
 	return Py_BuildValue( "s", lib_buffer );
 }
 
 PyObject *getfen ( PyObject *self, PyObject *args ) {
-	PyArg_ParseTuple( args,  "" );
 	sGetFEN( lib_buffer );
 	return Py_BuildValue( "s", lib_buffer );
 }
@@ -217,14 +218,12 @@ PyObject *setfen ( PyObject *self, PyObject *args ) {
 }
 
 PyObject *movegen ( PyObject *self, PyObject *args ) {
-	PyArg_ParseTuple( args,  "" );
 	MoveGen(lib_mv);
 	int count = lib_mv[0];
 	return Py_BuildValue( "i", count );
 }
 
 PyObject *legalmoves ( PyObject *self, PyObject *args ) {
-	PyArg_ParseTuple( args,  "" );
 	sLegalMoves( lib_buffer, lib_mv );
 	return Py_BuildValue( "s", lib_buffer );
 }
@@ -250,12 +249,10 @@ PyObject *parsepgn ( PyObject *self, PyObject *args ) {
 }
 
 PyObject *ischeck ( PyObject *self, PyObject *args ) {
-	PyArg_ParseTuple( args,  "" );
 	return ( IsCheckNow() ? Py_True : Py_False );
 }
 
 PyObject *ischeckmate ( PyObject *self, PyObject *args ) {
-	PyArg_ParseTuple( args,  "" );
 	return ( IsCheckMateNow() ? Py_True : Py_False );
 }
 
@@ -263,7 +260,6 @@ PyObject *ischeckmate ( PyObject *self, PyObject *args ) {
 
 
 PyObject *i_movegen ( PyObject *self, PyObject *args ) {
-	int depth;
 	PyArg_ParseTuple( args,  "i", &depth );
 	
 	U8 *dp = &lib_ii_mv[(4<<8)*depth];
@@ -278,12 +274,118 @@ PyObject *i_movegen ( PyObject *self, PyObject *args ) {
 
 
 PyObject *i_domove ( PyObject *self, PyObject *args ) {
-	int depth;
 	PyArg_ParseTuple( args,  "i", &depth );
 	
 	DoMove( lib_ii_po[depth] );
 	lib_ii_po[depth]+=4;
 	
+	return Py_BuildValue( "", NULL );
+}
+
+//
+//  v1.2 added
+//  more information of current board status available
+//  see u64_chess.h for more
+
+
+// create a list of tuples
+PyObject *Tu( U64 o ) {
+	
+	int n = 0;
+
+	while(o) {
+		// which square?
+		isquares[n++] = (U8)trail0(o);
+		o &= o-1;
+		}
+	
+	PyObject *tuple = PyTuple_New(n);
+	for(int i=0; i<n; i++)
+	{
+		PyTuple_SET_ITEM(tuple, i, PyLong_FromSsize_t( isquares[i] ) );
+	}
+	
+	return tuple;
+}
+
+
+// get current board in object
+PyObject *getboard ( PyObject *self, PyObject *args ) {
+
+	return Py_BuildValue( "{s:O,s:O,s:O,s:O,s:O,s:O,s:O,s:O,s:O,s:O,s:O,s:O,s:O,s:O}",
+		"wk", Tu(WK), "wq", Tu(WQ), "wr",	Tu(WR),		"wb", Tu(WB), "wn", Tu(WN), "wp", Tu(WP),
+		"bk", Tu(BK), "bq", Tu(BQ), "br",	Tu(BR),		"bb", Tu(BB), "bn", Tu(BN), "bp", Tu(BP),
+		"tomove",  PyLong_FromSsize_t(ToMove), "enpsq",  PyLong_FromSsize_t(trail0(ENPSQ))
+		);
+}
+
+// get information on possible castlings
+PyObject *getcastlings ( PyObject *self, PyObject *args ) {
+
+	return Py_BuildValue( "{s:O,s:O,s:O,s:O}",
+		"e1c1", PyLong_FromSsize_t( ((CASTLES&castle_E1C1)==castle_E1C1) ? 1 : 0),
+		"e1h1", PyLong_FromSsize_t( ((CASTLES&castle_E1H1)==castle_E1H1) ? 1 : 0),
+		"e8c8", PyLong_FromSsize_t( ((CASTLES&castle_E8C8)==castle_E8C8) ? 1 : 0),
+		"e8h8", PyLong_FromSsize_t( ((CASTLES&castle_E8H8)==castle_E8H8) ? 1 : 0) );
+}
+
+// get occupancies information, after movegen
+PyObject *getoccupancies ( PyObject *self, PyObject *args ) {
+
+	PyArg_ParseTuple( args,  "i", &choice );
+	
+	U64 o=0;
+	switch(choice) {
+		case 0: o=OCC; break;
+		case 1: o=WOCC; break;
+		case 2: o=BOCC; break;
+		case 3: o=NOCC; break;
+		case 4: o=NWOCC; break;
+		case 5: o=NBOCC; break;
+		case 6: o=EOCC; break;
+		case 7: o=EWOCC; break;
+		case 8: o=EBOCC; break;	
+	}
+	
+	return Py_BuildValue( "O", Tu(o) );
+}
+
+// get more data on last move
+PyObject *i_moveinfo ( PyObject *self, PyObject *args ) {
+	PyArg_ParseTuple( args,  "i", &depth );
+	
+	U8 *p = lib_ii_po[depth];
+	
+	U8 t1 = ((*p)&15);
+	U8 t2 = ((*(p++))>>4)&15;
+	U8 f_sq = (*(p++));
+	U8 t_sq = (*(p++));
+	U8 flags = (*p);
+	U8 capt = (flags&1);
+	U8 pr = ((flags&(1<<1))?1:0);
+	U8 pr_pc = ((flags>>2)&3);
+	U8 ecapt = ((flags&(1<<4))?1:0);
+	U8 cs = ((flags&(1<<5))?1:0);
+	U8 ck = ((flags&(1<<6))?1:0);
+	U8 cm = ((flags&(1<<7))?1:0);
+	
+	return Py_BuildValue( "{s:O,s:O,s:O,s:O,s:O,s:O,s:O,s:O,s:O,s:O,s:O}",
+		"pieceTypeFrom",  PyLong_FromSsize_t(t1),
+		"pieceTypeTo",  PyLong_FromSsize_t(t2),
+		"squareFrom",  PyLong_FromSsize_t(f_sq),
+		"squareTo",  PyLong_FromSsize_t(t_sq),
+		"capture",  PyLong_FromSsize_t(capt),
+		"promote",  PyLong_FromSsize_t(pr),
+		"promPiece",  PyLong_FromSsize_t(pr_pc),
+		"enPassCapture",  PyLong_FromSsize_t(ecapt),
+		"castling",  PyLong_FromSsize_t(cs),
+		"check",  PyLong_FromSsize_t(ck),
+		"checkmate",  PyLong_FromSsize_t(cm) );
+}
+
+PyObject *i_skipmove ( PyObject *self, PyObject *args ) {
+	PyArg_ParseTuple( args,  "i", &depth );
+	lib_ii_po[depth]+=4;
 	return Py_BuildValue( "", NULL );
 }
 
@@ -314,12 +416,14 @@ PyObject *freaknow ( PyObject *self, PyObject *args ) {
 }
 
 
+
 //------------------------------------------
 
 
 static PyMethodDef methods[] = {
 	{ "setstartpos", setstartpos, METH_VARARGS, "Set starting chess position on board." },
 	{ "sboard", sboard, METH_VARARGS, "To display the chess board." },
+	{ "getboard", getboard, METH_VARARGS, "Get variables of board into tuples." },
 	{ "getfen", getfen, METH_VARARGS, "Get the FEN of current chess position on board." },
 	{ "setfen", setfen, METH_VARARGS, "Set the chess position by FEN." },
 	{ "movegen", movegen, METH_VARARGS, "Force resources consuming legal chess moves generator routine." },
@@ -328,9 +432,14 @@ static PyMethodDef methods[] = {
 	{ "undomove", undomove, METH_VARARGS, "Undo the last move. Also iterations." },
 	{ "parsepgn", parsepgn, METH_VARARGS, "Parse PGN and perform moves. Returns uci string." },
 	{ "ischeck", ischeck, METH_VARARGS, "Is check+ now or not." },
+	{ "ischeckmate", ischeckmate, METH_VARARGS, "Is checkmate# now or not." },
 	{ "i_movegen", i_movegen, METH_VARARGS, "Iterations. Fast MoveGen at depth." },
 	{ "i_domove", i_domove, METH_VARARGS, "Iterations. Fast DoMove at depth." },
-	{ "freaknow", freaknow, METH_VARARGS, "Iterations. C route sample returns occupancy of white king." },
+	{ "i_moveinfo", i_moveinfo, METH_VARARGS, "Iterations. Get move details into variables." },		
+	{ "i_skipmove", i_skipmove, METH_VARARGS, "Iterations. Skip move." },
+	{ "getcastlings", getcastlings, METH_VARARGS, "Get castling variables." },
+	{ "getoccupancies", getoccupancies, METH_VARARGS, "Get variables of board occupancies into tuples." },
+	{ "freaknow", freaknow, METH_VARARGS, "C route sample returns occupancy of white king." },
 	{ NULL, NULL, 0, NULL }
 };
 
