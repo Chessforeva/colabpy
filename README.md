@@ -1,6 +1,6 @@
 
 ## Chelpy python chess library for Google Colab
-v.1.0 nov.2024, Chessforeva
+v.1.2 nov.2024, Chessforeva
 
 Written in pure C. Magic bitboards calculations. Performance shoud be really good, but not scalable as GPU cuda tensors or likewise. Just a single thread CPU only.
 
@@ -109,12 +109,20 @@ May work also on Anaconda Jupyters or AI Lightnings.
     #  7 - EWOCC (Whites with en-passant)
     #  8 - EBOCC (Blacks with en-passant)
     
+    import torch
+
     chelpy.setstartpos()
     chelpy.movegen()
-    chelpy.getoccupancies(7)
-    # Tensor = torch.tensor(tuple)
+    Tuple = chelpy.getoccupancies(7)
+    Tensor = torch.tensor(Tuple)
+    print(Tensor)
 
-
+    #Look white pawns
+    Bo = chelpy.getboard()
+    Tuple = Bo['wp']
+    Tensor = torch.tensor(Tuple)
+    print(Tensor)
+    
 
 
 #### Iterations
