@@ -125,7 +125,7 @@ May work also on Anaconda Jupyters or AI Lightnings.
     
 
 
-#### Iterations
+#### Iterations (slow)
 
     
     # Functions i_movegen, i_domove, undomove are iterable in depth.
@@ -178,9 +178,10 @@ May work also on Anaconda Jupyters or AI Lightnings.
         mv = chelpy.legalmoves().split(" ")
         print(mv[i0]);
         break
-    
+
     # selective iterations
     # scan 1st.move knight moves only and all black knight moves too
+    # this is too slow in python, especially dictionaries with string keys
     
     chelpy.setstartpos()
     # depth 0 white 1. move
@@ -214,13 +215,41 @@ May work also on Anaconda Jupyters or AI Lightnings.
         # other pawns moves
         chelpy.i_skipmove(0)
 
+    # selective iterations
+    # search check, too slow
+    
+    chelpy.setstartpos()
+    chelpy.parsepgn("1.g4 e5 2.f3")
+    # depth 0 white 1. move
+    for i0 in range(chelpy.i_movegen(0)):
+      m0 = chelpy.i_moveinfo(0)
+      if(m0['check'] == 1):
+        print(m0)
+        chelpy.i_domove(0)
+        print(chelpy.sboard())
+        chelpy.undomove()
+    
+      else:
+        chelpy.i_skipmove(0)
+    
 
     #see performance
-    for i in range(1*1000*1000):
+    #scans e2-e4 move k times
+    
+    k = 0
+    for i in range(100*1000):
       chelpy.setstartpos()
-      chelpy.movegen()
-      # or write a C function
-      White_king_on_square = chelpy.freaknow()
+      for i0 in range(chelpy.i_movegen(0)):
+        m0 = chelpy.i_moveinfo(0)
+        if(m0['squareFrom'] == 12 and m0['squareTo'] == 28):
+          k = k + 1
+          chelpy.i_domove(0)
+          # or write a C function
+          White_king_on_square = chelpy.freaknow()
+          chelpy.undomove()
+        else:
+          chelpy.i_skipmove(0)
+    print(k)
     
 
 #### Other utils available
