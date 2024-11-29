@@ -14,6 +14,7 @@ In case if there is no local linux VM.
 Upload chelpy.c, u64_chess.h to Google Shell linux and compile .so library for python.
 
 Obtain include path in python, look for 'include:' property.
+
     import sysconfig
     print( sysconfig.get_paths() )
 
