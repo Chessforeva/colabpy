@@ -11,7 +11,7 @@ Source to clone
 https://github.com/Chessforeva/colabpy
 
 In case if there is no local linux VM.
-Upload chelpy.c, u64_chess.h to Google Shell linux and compile .so library for python.
+Upload chelpy.c, u64_chess.h, u64_polyglot.h to Google Shell linux and compile .so library for python.
 
 Obtain include path in python, look for 'include:' property.
 
@@ -89,7 +89,12 @@ May work also on Anaconda Jupyters or AI Lightnings.
     # to move
     s = chelpy.sboard()[72]
     print(s)
-    
+
+    # see chelpy polyglot key
+    # unique for chess openings, opensource files .bin format, also Stockfish compatible  
+    chelpy.setfen("rnbqkbnr/ppp1p1pp/8/3pPp2/8/8/PPPP1PPP/RNBQKBNR w KQkq f6 0 3")
+    print(hex(chelpy.polyglotkey()))
+
     chelpy.setstartpos()
     ucis_made = chelpy.parsepgn("1.Nf3 Nc6 2.Rg1 Rb8 3.a2-a4 ")
     # board into variables (fast)
