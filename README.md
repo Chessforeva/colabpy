@@ -5,7 +5,8 @@ v.1.2 nov.2024, Chessforeva
 Written in pure C. Magic bitboards calculations. Performance shoud be really good, but not scalable as GPU cuda tensors or likewise. Just a single thread CPU only.
 
 Notebook and usage samples:
-https://colab.research.google.com/drive/1y8cYkpbHDymLMZ2K9zJNyRhw3mVWEvTj?usp=sharing
+
+[![Open in colab](https://chessforeva.gitlab.io/colab/opencolab.gif 'Open in colab')](https://colab.research.google.com/drive/1y8cYkpbHDymLMZ2K9zJNyRhw3mVWEvTj?usp=sharing)
 
 Source to clone
 https://github.com/Chessforeva/colabpy
