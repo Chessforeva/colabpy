@@ -92,9 +92,9 @@ May work also on Anaconda Jupyters or AI Lightnings.
     print(s)
 
     # see chelpy polyglot key
-    # unique for chess openings, opensource files .bin format, also Stockfish compatible  
     chelpy.setfen("rnbqkbnr/ppp1p1pp/8/3pPp2/8/8/PPPP1PPP/RNBQKBNR w KQkq f6 0 3")
-    print(hex(chelpy.polyglotkey()))
+    polyglotkey = chelpy.polyglotkey()  & 0xffffffffffffffff
+    print(hex(polyglotkey))
 
     chelpy.setstartpos()
     ucis_made = chelpy.parsepgn("1.Nf3 Nc6 2.Rg1 Rb8 3.a2-a4 ")
