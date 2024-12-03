@@ -1,7 +1,7 @@
 /*
 
 	CHELPY.SO
-	v.1.2
+	v.1.3
 
 	This is a python chess library intended for Google Colab.
 		
@@ -32,6 +32,8 @@
 
 #include "u64_chess.h"
 
+// This is needed for polyglot key generation
+#include "u64_polyglot.h"
 
 char lib_buffer[102400];
 char lib_mv[4<<8];
@@ -228,12 +230,28 @@ PyObject *legalmoves ( PyObject *self, PyObject *args ) {
 	return Py_BuildValue( "s", lib_buffer );
 }
 
-
 PyObject *ucimove ( PyObject *self, PyObject *args ) {
 	char *ucistr;
 	PyArg_ParseTuple( args,  "s", &ucistr );
 	return Py_BuildValue( "i", uciMove( ucistr ) );
 }
+
+PyObject *parseucimoves ( PyObject *self, PyObject *args ) {
+	char *ucisstr;
+	PyArg_ParseTuple( args,  "s", &ucisstr );
+	char *s = ucisstr;
+	char uci[8];
+	int i, r = 0;
+	while( (*s)>13 ) {
+		while((*s)==32) s++;
+		for( i=0; ((*s)>13) && (i<4); i++) uci[i]=(*(s++));
+		if( ((*s)>13) && (*s)!=32 ) uci[i++]=(*(s++));
+		uci[i]=0;
+		r += uciMove( uci );
+		}
+	return Py_BuildValue( "i", r );
+}
+
 
 PyObject *undomove ( PyObject *self, PyObject *args ) {
 	PyArg_ParseTuple( args,  "" );
@@ -254,6 +272,10 @@ PyObject *ischeck ( PyObject *self, PyObject *args ) {
 
 PyObject *ischeckmate ( PyObject *self, PyObject *args ) {
 	return ( IsCheckMateNow() ? Py_True : Py_False );
+}
+
+PyObject *polyglotkey ( PyObject *self, PyObject *args ) {
+	return Py_BuildValue( "K", getPolyglotKey() );
 }
 
 // Freak mode. Iterations in depth
@@ -282,12 +304,6 @@ PyObject *i_domove ( PyObject *self, PyObject *args ) {
 	return Py_BuildValue( "", NULL );
 }
 
-//
-//  v1.2 added
-//  more information of current board status available
-//  see u64_chess.h for more
-
-
 // create a list of tuples
 PyObject *Tu( U64 o ) {
 	
@@ -312,42 +328,53 @@ PyObject *Tu( U64 o ) {
 // get current board in object
 PyObject *getboard ( PyObject *self, PyObject *args ) {
 
-	return Py_BuildValue( "{s:O,s:O,s:O,s:O,s:O,s:O,s:O,s:O,s:O,s:O,s:O,s:O,s:O,s:O}",
+	return Py_BuildValue( "{s:O,s:O,s:O,s:O,s:O,s:O,s:O,s:O,s:O,s:O,s:O,s:O,s:i,s:i}",
 		"wk", Tu(WK), "wq", Tu(WQ), "wr",	Tu(WR),		"wb", Tu(WB), "wn", Tu(WN), "wp", Tu(WP),
 		"bk", Tu(BK), "bq", Tu(BQ), "br",	Tu(BR),		"bb", Tu(BB), "bn", Tu(BN), "bp", Tu(BP),
-		"tomove",  PyLong_FromSsize_t(ToMove), "enpsq",  PyLong_FromSsize_t(trail0(ENPSQ))
+		"tomove",  ToMove, "enpsq", trail0(ENPSQ)
 		);
 }
+
+// get current board in object
+PyObject *getboardU64 ( PyObject *self, PyObject *args ) {
+	return Py_BuildValue( "(KKKKKKKKKKKKii)",
+		WK,WQ,WR,WB,WN,WP,BK,BQ,BR,BB,BN,BP, ToMove, trail0(ENPSQ) );
+}
+
 
 // get information on possible castlings
 PyObject *getcastlings ( PyObject *self, PyObject *args ) {
 
-	return Py_BuildValue( "{s:O,s:O,s:O,s:O}",
-		"e1c1", PyLong_FromSsize_t( ((CASTLES&castle_E1C1)==castle_E1C1) ? 1 : 0),
-		"e1h1", PyLong_FromSsize_t( ((CASTLES&castle_E1H1)==castle_E1H1) ? 1 : 0),
-		"e8c8", PyLong_FromSsize_t( ((CASTLES&castle_E8C8)==castle_E8C8) ? 1 : 0),
-		"e8h8", PyLong_FromSsize_t( ((CASTLES&castle_E8H8)==castle_E8H8) ? 1 : 0) );
+	return Py_BuildValue( "{s:i,s:i,s:i,s:i}",
+		"e1c1", ( ((CASTLES&castle_E1C1)==castle_E1C1) ? 1 : 0),
+		"e1h1", ( ((CASTLES&castle_E1H1)==castle_E1H1) ? 1 : 0),
+		"e8c8", ( ((CASTLES&castle_E8C8)==castle_E8C8) ? 1 : 0),
+		"e8h8", ( ((CASTLES&castle_E8H8)==castle_E8H8) ? 1 : 0) );
+}
+
+// get information on possible castlings
+PyObject *getcastlingsU64 ( PyObject *self, PyObject *args ) {
+
+	return Py_BuildValue( "(iiii)",
+		( ((CASTLES&castle_E1C1)==castle_E1C1) ? 1 : 0),
+		( ((CASTLES&castle_E1H1)==castle_E1H1) ? 1 : 0),
+		( ((CASTLES&castle_E8C8)==castle_E8C8) ? 1 : 0),
+		( ((CASTLES&castle_E8H8)==castle_E8H8) ? 1 : 0) );
 }
 
 // get occupancies information, after movegen
 PyObject *getoccupancies ( PyObject *self, PyObject *args ) {
+	
+	return Py_BuildValue( "{s:O,s:O,s:O,s:O,s:O,s:O,s:O,s:O,s:O}",
+		"occ",Tu(OCC), "wocc", Tu(WOCC), "bocc", Tu(BOCC), "nocc", Tu(NOCC),
+		"nwocc", Tu(NWOCC), "nbocc", Tu(NBOCC), "eocc", Tu(EOCC), "ewocc", Tu(EWOCC), "ebocc", Tu(EBOCC) );
+}
 
-	PyArg_ParseTuple( args,  "i", &choice );
+// get occupancies information, after movegen
+PyObject *getoccupanciesU64 ( PyObject *self, PyObject *args ) {
 	
-	U64 o=0;
-	switch(choice) {
-		case 0: o=OCC; break;
-		case 1: o=WOCC; break;
-		case 2: o=BOCC; break;
-		case 3: o=NOCC; break;
-		case 4: o=NWOCC; break;
-		case 5: o=NBOCC; break;
-		case 6: o=EOCC; break;
-		case 7: o=EWOCC; break;
-		case 8: o=EBOCC; break;	
-	}
-	
-	return Py_BuildValue( "O", Tu(o) );
+	return Py_BuildValue( "(KKKKKKKKK)",
+		OCC, WOCC, BOCC, NOCC, NWOCC, NBOCC, EOCC, EWOCC, EBOCC );
 }
 
 // get more data on last move
@@ -369,18 +396,41 @@ PyObject *i_moveinfo ( PyObject *self, PyObject *args ) {
 	U8 ck = ((flags&(1<<6))?1:0);
 	U8 cm = ((flags&(1<<7))?1:0);
 	
-	return Py_BuildValue( "{s:O,s:O,s:O,s:O,s:O,s:O,s:O,s:O,s:O,s:O,s:O}",
-		"pieceTypeFrom",  PyLong_FromSsize_t(t1),
-		"pieceTypeTo",  PyLong_FromSsize_t(t2),
-		"squareFrom",  PyLong_FromSsize_t(f_sq),
-		"squareTo",  PyLong_FromSsize_t(t_sq),
-		"capture",  PyLong_FromSsize_t(capt),
-		"promote",  PyLong_FromSsize_t(pr),
-		"promPiece",  PyLong_FromSsize_t(pr_pc),
-		"enPassCapture",  PyLong_FromSsize_t(ecapt),
-		"castling",  PyLong_FromSsize_t(cs),
-		"check",  PyLong_FromSsize_t(ck),
-		"checkmate",  PyLong_FromSsize_t(cm) );
+	return Py_BuildValue( "{s:i,s:i,s:i,s:i,s:i,s:i,s:i,s:i,s:i,s:i,s:i}",
+		"pieceTypeFrom", t1,
+		"pieceTypeTo", t2,
+		"squareFrom", f_sq,
+		"squareTo", t_sq,
+		"capture", capt,
+		"promote", pr,
+		"promPiece", pr_pc,
+		"enPassCapture", ecapt,
+		"castling", cs,
+		"check", ck,
+		"checkmate", cm );
+}
+
+// get more data on last move
+PyObject *i_moveinfoU64 ( PyObject *self, PyObject *args ) {
+	PyArg_ParseTuple( args,  "i", &depth );
+	
+	U8 *p = lib_ii_po[depth];
+	
+	U8 t1 = ((*p)&15);
+	U8 t2 = ((*(p++))>>4)&15;
+	U8 f_sq = (*(p++));
+	U8 t_sq = (*(p++));
+	U8 flags = (*p);
+	U8 capt = (flags&1);
+	U8 pr = ((flags&(1<<1))?1:0);
+	U8 pr_pc = ((flags>>2)&3);
+	U8 ecapt = ((flags&(1<<4))?1:0);
+	U8 cs = ((flags&(1<<5))?1:0);
+	U8 ck = ((flags&(1<<6))?1:0);
+	U8 cm = ((flags&(1<<7))?1:0);
+	
+	return Py_BuildValue( "(iiiiiiiiiii)",
+		t1, t2, f_sq, t_sq, capt, pr, pr_pc, ecapt, cs, ck, cm );
 }
 
 PyObject *i_skipmove ( PyObject *self, PyObject *args ) {
@@ -424,6 +474,7 @@ static PyMethodDef methods[] = {
 	{ "setstartpos", setstartpos, METH_VARARGS, "Set starting chess position on board." },
 	{ "sboard", sboard, METH_VARARGS, "To display the chess board." },
 	{ "getboard", getboard, METH_VARARGS, "Get variables of board into tuples." },
+	{ "getboardU64", getboardU64, METH_VARARGS, "getboard into unsigned long long (fast)" },
 	{ "getfen", getfen, METH_VARARGS, "Get the FEN of current chess position on board." },
 	{ "setfen", setfen, METH_VARARGS, "Set the chess position by FEN." },
 	{ "movegen", movegen, METH_VARARGS, "Force resources consuming legal chess moves generator routine." },
@@ -431,14 +482,19 @@ static PyMethodDef methods[] = {
 	{ "ucimove", ucimove, METH_VARARGS, "Perform an uci move on chess board." },
 	{ "undomove", undomove, METH_VARARGS, "Undo the last move. Also iterations." },
 	{ "parsepgn", parsepgn, METH_VARARGS, "Parse PGN and perform moves. Returns uci string." },
+	{ "parseucimoves", parseucimoves, METH_VARARGS, "Parse string of ucis for faster performance. Returns count of moves made." },
 	{ "ischeck", ischeck, METH_VARARGS, "Is check+ now or not." },
 	{ "ischeckmate", ischeckmate, METH_VARARGS, "Is checkmate# now or not." },
+	{ "polyglotkey", polyglotkey, METH_VARARGS, "Get a the polyglot opening book key for position." },
 	{ "i_movegen", i_movegen, METH_VARARGS, "Iterations. Fast MoveGen at depth." },
 	{ "i_domove", i_domove, METH_VARARGS, "Iterations. Fast DoMove at depth." },
-	{ "i_moveinfo", i_moveinfo, METH_VARARGS, "Iterations. Get move details into variables." },		
+	{ "i_moveinfo", i_moveinfo, METH_VARARGS, "Iterations. Get move details into variables." },
+	{ "i_moveinfoU64", i_moveinfoU64, METH_VARARGS, "moveinfoU64 into unsigned long long  (fast)" },	
 	{ "i_skipmove", i_skipmove, METH_VARARGS, "Iterations. Skip move." },
 	{ "getcastlings", getcastlings, METH_VARARGS, "Get castling variables." },
+	{ "getcastlingsU64", getcastlingsU64, METH_VARARGS, "getcastlings into unsigned long long  (fast)" },
 	{ "getoccupancies", getoccupancies, METH_VARARGS, "Get variables of board occupancies into tuples." },
+	{ "getoccupanciesU64", getoccupanciesU64, METH_VARARGS, "getoccupancies all into unsigned long long  (fast)" },
 	{ "freaknow", freaknow, METH_VARARGS, "C route sample returns occupancy of white king." },
 	{ NULL, NULL, 0, NULL }
 };
