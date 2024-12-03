@@ -46,6 +46,8 @@ U8 *lib_ii_po[32];
 
 Py_ssize_t isquares[64];
 
+const int matdifvals[] = { 900, 500, 320, 318, 110, 20000, 0,0, -900, -500, -320, -318, -110, -20000, 0,0 };
+
 //------------------------------------------
 //
 //	Parse PGN part
@@ -207,6 +209,23 @@ PyObject *sboard ( PyObject *self, PyObject *args ) {
 	return Py_BuildValue( "s", lib_buffer );
 }
 
+PyObject *sboard64 ( PyObject *self, PyObject *args ) {
+	U8 c,j,sq;
+	char *s = lib_buffer;
+	for(j=0;j<64;j++) s[j]=' ';
+	for(j=0;j<14;j++) {
+		if(j==6) j=8;
+		c = pieces[j];
+		U64 o = *(PIECES[j]);
+		while(o) {
+			s[trail0(o)] = c;
+			o &= o-1;
+		}
+	}
+	s[64]=0;
+	return Py_BuildValue( "s", lib_buffer );
+}
+
 PyObject *getfen ( PyObject *self, PyObject *args ) {
 	sGetFEN( lib_buffer );
 	return Py_BuildValue( "s", lib_buffer );
@@ -362,16 +381,36 @@ PyObject *getcastlingsU64 ( PyObject *self, PyObject *args ) {
 		( ((CASTLES&castle_E8H8)==castle_E8H8) ? 1 : 0) );
 }
 
-// get occupancies information, after movegen
+// get occupancies information
 PyObject *getoccupancies ( PyObject *self, PyObject *args ) {
+
+    WOCC = WK|WQ|WR|WB|WN|WP;
+    BOCC = BK|BQ|BR|BB|BN|BP;
+    OCC = WOCC|BOCC;
+    NOCC = ~OCC;
+    NWOCC = ~WOCC;
+    NBOCC = ~BOCC;
+    EOCC = OCC|ENPSQ;
+    EWOCC = WOCC|ENPSQ;
+    EBOCC = BOCC|ENPSQ;
 	
 	return Py_BuildValue( "{s:O,s:O,s:O,s:O,s:O,s:O,s:O,s:O,s:O}",
 		"occ",Tu(OCC), "wocc", Tu(WOCC), "bocc", Tu(BOCC), "nocc", Tu(NOCC),
 		"nwocc", Tu(NWOCC), "nbocc", Tu(NBOCC), "eocc", Tu(EOCC), "ewocc", Tu(EWOCC), "ebocc", Tu(EBOCC) );
 }
 
-// get occupancies information, after movegen
+// get occupancies information
 PyObject *getoccupanciesU64 ( PyObject *self, PyObject *args ) {
+	
+    WOCC = WK|WQ|WR|WB|WN|WP;
+    BOCC = BK|BQ|BR|BB|BN|BP;
+    OCC = WOCC|BOCC;
+    NOCC = ~OCC;
+    NWOCC = ~WOCC;
+    NBOCC = ~BOCC;
+    EOCC = OCC|ENPSQ;
+    EWOCC = WOCC|ENPSQ;
+    EBOCC = BOCC|ENPSQ;
 	
 	return Py_BuildValue( "(KKKKKKKKK)",
 		OCC, WOCC, BOCC, NOCC, NWOCC, NBOCC, EOCC, EWOCC, EBOCC );
@@ -439,6 +478,35 @@ PyObject *i_skipmove ( PyObject *self, PyObject *args ) {
 	return Py_BuildValue( "", NULL );
 }
 
+PyObject *piecescount ( PyObject *self, PyObject *args ) {
+	
+    WOCC = WK|WQ|WR|WB|WN|WP;
+    BOCC = BK|BQ|BR|BB|BN|BP;
+    OCC = WOCC|BOCC;
+	
+	U64 o = OCC;	//occupancies
+	int n = 0;
+	while(o) {
+		n++;
+		o &= o-1;
+		}
+	return Py_BuildValue( "i", n);
+}
+
+PyObject *materialdiff ( PyObject *self, PyObject *args ) {
+	
+	int diff = 0;
+	for(U8 j=0;j<14;j++) {
+		if(j==6) j=8;
+		U64 o = *(PIECES[j]);
+		while(o) {
+			diff += matdifvals[j];
+			o &= o-1;
+		}
+	}
+	return Py_BuildValue( "i", diff);
+}
+
 //
 // Here is a sample function that can be advanced as chess evaluation or something else.
 //
@@ -473,6 +541,7 @@ PyObject *freaknow ( PyObject *self, PyObject *args ) {
 static PyMethodDef methods[] = {
 	{ "setstartpos", setstartpos, METH_VARARGS, "Set starting chess position on board." },
 	{ "sboard", sboard, METH_VARARGS, "To display the chess board." },
+	{ "sboard64", sboard64, METH_VARARGS, "sboard into string[64] fast without ck,cm." },
 	{ "getboard", getboard, METH_VARARGS, "Get variables of board into tuples." },
 	{ "getboardU64", getboardU64, METH_VARARGS, "getboard into unsigned long long (fast)" },
 	{ "getfen", getfen, METH_VARARGS, "Get the FEN of current chess position on board." },
@@ -495,6 +564,8 @@ static PyMethodDef methods[] = {
 	{ "getcastlingsU64", getcastlingsU64, METH_VARARGS, "getcastlings into unsigned long long  (fast)" },
 	{ "getoccupancies", getoccupancies, METH_VARARGS, "Get variables of board occupancies into tuples." },
 	{ "getoccupanciesU64", getoccupanciesU64, METH_VARARGS, "getoccupancies all into unsigned long long  (fast)" },
+	{ "piecescount", piecescount, METH_VARARGS, "Get count of pieces." },
+	{ "materialdiff", materialdiff, METH_VARARGS, "To indicate material difference, not 0." },
 	{ "freaknow", freaknow, METH_VARARGS, "C route sample returns occupancy of white king." },
 	{ NULL, NULL, 0, NULL }
 };
