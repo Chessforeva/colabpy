@@ -1232,10 +1232,12 @@ void sGetFEN( char *buffer ) {
     if(!CASTLES) s[i++]='-';
     else
                 {
+				j=i;	
         if((CASTLES&castle_E1H1)==castle_E1H1) s[i++]='K';
         if((CASTLES&castle_E1C1)==castle_E1C1) s[i++]='Q';
         if((CASTLES&castle_E8H8)==castle_E8H8) s[i++]='k';
         if((CASTLES&castle_E8C8)==castle_E8C8) s[i++]='q';
+				if(j==i) s[i++]='-';
                 }
     s[i++]=' ';
         if(!ENPSQ) s[i++]='-';
