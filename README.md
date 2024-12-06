@@ -1,6 +1,6 @@
 
 ## Chelpy python chess library for Google Colab
-v.1.3 nov.2024, Chessforeva
+v.1.4 nov.2024, Chessforeva
 
 Written in pure C. Magic bitboards calculations, as chess developers mean it. Intended to improve performance. Not sure on results.
 

@@ -1,7 +1,7 @@
 /*
 
 	CHELPY.SO
-	v.1.3
+	v.1.4
 
 	This is a python chess library intended for Google Colab.
 		
@@ -226,6 +226,86 @@ PyObject *sboard64 ( PyObject *self, PyObject *args ) {
 	return Py_BuildValue( "s", lib_buffer );
 }
 
+// An unique position string 70 bytes long to save position somewhere
+// (kinda key code for convinience)
+PyObject *uniq ( PyObject *self, PyObject *args ) {
+	U8 c,j,sq;
+	char *s = lib_buffer;
+	for(j=0;j<64;j++) s[j]=' ';
+	for(j=0;j<14;j++) {
+		if(j==6) j=8;
+		c = pieces[j];
+		U64 o = *(PIECES[j]);
+		while(o) {
+			s[trail0(o)] = c;
+			o &= o-1;
+		}
+	}
+	s[64]= ( ToMove ? 'b' : 'w' );
+	s[65]= ( ((CASTLES&castle_E1H1)==castle_E1H1) ? 'K' : ' ' );
+	s[66]= ( ((CASTLES&castle_E1C1)==castle_E1C1) ? 'Q' : ' ' );
+	s[67]= ( ((CASTLES&castle_E8H8)==castle_E8H8) ? 'k' : ' ' );
+	s[68]= ( ((CASTLES&castle_E8C8)==castle_E8C8) ? 'q' : ' ' );
+
+	if(!ENPSQ) {
+		s[69] = ' ';
+		}
+	else {
+		sq = trail0(ENPSQ);
+		s[69] = (( (((sq>>3)==2) ? 'A' : 'a' ) + (sq&7)) );
+		}
+	s[70]=0;
+	return Py_BuildValue( "s", lib_buffer );
+}
+
+// faster position setup from uniq code
+PyObject *setasuniq ( PyObject *self, PyObject *args ) {
+	char *ustr;
+	PyArg_ParseTuple( args,  "s",  &ustr);
+	
+    U8 sq, j, v;
+	char c;
+
+    WK=WQ=WR=WB=WN=WP=0LL;
+    BK=BQ=BR=BB=BN=BP=0LL;
+
+	for(sq=0; sq<64; sq++)
+        {
+		c = ustr[sq];
+		if(c!=' ') {
+			for(j=0;j<14;j++) {
+                if(j==6) j=8;
+                if(pieces[j]==c) { *(PIECES[j])|=(1LL<<sq); }
+                }
+            }
+		}
+	ToMove = (ustr[64]=='w'? 0: 1);
+	CASTLES = 0LL;
+	if( ustr[65]== 'K' ) CASTLES|=castle_E1H1;
+	if( ustr[66]== 'Q' ) CASTLES|=castle_E1C1;
+	if( ustr[67]== 'k' ) CASTLES|=castle_E8H8;
+	if( ustr[68]== 'q' ) CASTLES|=castle_E8C8;;
+	
+	if( ustr[69]!= ' ' ) {
+		c = ustr[69];
+		v = 5;
+		if(c<'a') {
+			c+=32;
+			v = 2;
+			}
+        sq = ((v<<3) | ((c-'a')&7));
+        ENPSQ = (1LL<<sq);
+        }
+	else {
+		ENPSQ = 0LL;
+		}
+	
+	undo_p = undobuffer;
+    mg_po = mg_cnt = mg_uci_list;
+	
+	return Py_BuildValue( "", NULL );
+}
+
 PyObject *getfen ( PyObject *self, PyObject *args ) {
 	sGetFEN( lib_buffer );
 	return Py_BuildValue( "s", lib_buffer );
@@ -296,6 +376,7 @@ PyObject *ischeckmate ( PyObject *self, PyObject *args ) {
 PyObject *polyglotkey ( PyObject *self, PyObject *args ) {
 	return Py_BuildValue( "K", getPolyglotKey() );
 }
+
 
 // Freak mode. Iterations in depth
 
@@ -566,6 +647,8 @@ static PyMethodDef methods[] = {
 	{ "getoccupanciesU64", getoccupanciesU64, METH_VARARGS, "getoccupancies all into unsigned long long  (fast)" },
 	{ "piecescount", piecescount, METH_VARARGS, "Get count of pieces." },
 	{ "materialdiff", materialdiff, METH_VARARGS, "To indicate material difference, not 0." },
+	{ "uniq", uniq, METH_VARARGS, "Get 70 bytes unique string of position." },
+	{ "setasuniq", setasuniq, METH_VARARGS, "Set position as unig string." },
 	{ "freaknow", freaknow, METH_VARARGS, "C route sample returns occupancy of white king." },
 	{ NULL, NULL, 0, NULL }
 };
