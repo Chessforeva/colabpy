@@ -38,7 +38,6 @@
 char lib_buffer[102400];
 char lib_mv[4<<8];
 int depth;
-int choice;
 
 // freaking iterations
 char lib_ii_mv[(4<<8)*32];
@@ -353,7 +352,6 @@ PyObject *parseucimoves ( PyObject *self, PyObject *args ) {
 
 
 PyObject *undomove ( PyObject *self, PyObject *args ) {
-	PyArg_ParseTuple( args,  "" );
 	UnDoMove();
 	return Py_BuildValue( "", NULL );
 }

@@ -63,6 +63,16 @@ All samples of usage are well described in the shared colab notebook above.
     #now it works
     import chelpy
 
-    
-    
+
+#### Microsoft Windows dll libraries
+
+https://github.com/Chessforeva/Cpp4chess
+
+1. [u64chesslib.dll](https://github.com/Chessforeva/Cpp4chess/tree/master/DLL_u64chesslib)
+ is a shortened chess library similar to chelpy.so
+
+2. [ExeHandler64.dll](https://github.com/Chessforeva/Cpp4chess/tree/master/DLL_for_handling_exe_processes/ExeHandler64)
+ is a library to manage Stockfish execution and stdin-stdout processing
+
+There are python samples too.
 
