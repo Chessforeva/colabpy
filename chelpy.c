@@ -1,13 +1,13 @@
 /*
 
 	CHELPY.SO
-	v.1.4
+	v.1.5
 
 	This is a python chess library intended for Google Colab.
 		
 	Or other pythons, of course.
 	Develop as needed.
-	nov.2024
+	dec.2024
 	
 	
 	To compile:
@@ -356,6 +356,74 @@ PyObject *undomove ( PyObject *self, PyObject *args ) {
 	return Py_BuildValue( "", NULL );
 }
 
+PyObject *swaptomove ( PyObject *self, PyObject *args ) {
+	ToMove^=1;
+	return Py_BuildValue( "i", ToMove );
+}
+
+PyObject *sidetomove ( PyObject *self, PyObject *args ) {
+	return Py_BuildValue( "i", ToMove );
+}
+
+// Counts pieces by given occupancy
+int bitCount(U64 o)
+{
+	int n = 0;
+    while(o) {
+		n++;
+		o &= o-1;
+	}
+	return n;
+}
+
+// to verify chess position for normality
+U8 seemslegit () {
+	U8 b = 1;
+	U64 pawns = WP | BP;
+	
+	b &= (( (pawns & ((1LL<<0)|(1LL<<1)|(1LL<<2)|(1LL<<3)|(1LL<<4)|(1LL<<5)|(1LL<<6)|(1LL<<7)|
+						(1LL<<56)|(1LL<<57)|(1LL<<58)|(1LL<<59)|(1LL<<60)|(1LL<<61)|(1LL<<62)|(1LL<<63) )) ==0 ) ? 1 : 0);
+
+	b &= ((( bitCount(WK)==1 ) && ( bitCount(BK)==1 ) && (WK!=BK) )? 1: 0);	
+	b &= ((( bitCount(WP)<9 ) && ( bitCount(BP)<9 ) && ( bitCount(WN)<3 ) && ( bitCount(BN)<3 )) ? 1: 0);
+	b &= ((( bitCount(WB)<3 ) && ( bitCount(BB)<3 ) && ( bitCount(WR)<3 ) && ( bitCount(BR)<3 )) ? 1: 0);
+	if(b) {
+		// avoid same bishop squares
+		U64 o;
+		int sq, v, h, d, D;
+		for(D=9, o=WB; o;) {
+			sq = (U8)trail0(o);
+			v = (sq>>3); h = (sq&7); d = (v+h)&1;
+			if(D==9) D=d;
+			else if(D==d) b=0;
+			o &= o-1;
+		}
+		for(D=9, o=BB; o;) {
+			sq = (U8)trail0(o);
+			v = (sq>>3); h = (sq&7); d = (v+h)&1;
+			if(D==9) D=d;
+			else if(D==d) b=0;
+			o &= o-1;
+		}
+	}
+		
+	// can not be both check+
+	if(b){
+		if(IsCheckNow()) {
+			ToMove^=1;
+			if(IsCheckNow()) b=0;
+			ToMove^=1;
+		}
+	}
+	// should be pawn normality verify too, but not today
+	return b;
+}
+
+
+PyObject *seemslegitpos ( PyObject *self, PyObject *args ) {
+	return ( seemslegit() ? Py_True : Py_False );
+}
+
 PyObject *parsepgn ( PyObject *self, PyObject *args ) {
 	char *pgnstr;
 	PyArg_ParseTuple( args,  "s", &pgnstr );
@@ -495,7 +563,7 @@ PyObject *getoccupanciesU64 ( PyObject *self, PyObject *args ) {
 		OCC, WOCC, BOCC, NOCC, NWOCC, NBOCC, EOCC, EWOCC, EBOCC );
 }
 
-// get more data on last move
+// get more data on current move to iterate 
 PyObject *i_moveinfo ( PyObject *self, PyObject *args ) {
 	PyArg_ParseTuple( args,  "i", &depth );
 	
@@ -528,7 +596,8 @@ PyObject *i_moveinfo ( PyObject *self, PyObject *args ) {
 		"checkmate", cm );
 }
 
-// get more data on last move
+
+// get more data on current move to iterate 
 PyObject *i_moveinfoU64 ( PyObject *self, PyObject *args ) {
 	PyArg_ParseTuple( args,  "i", &depth );
 	
@@ -557,19 +626,24 @@ PyObject *i_skipmove ( PyObject *self, PyObject *args ) {
 	return Py_BuildValue( "", NULL );
 }
 
-PyObject *piecescount ( PyObject *self, PyObject *args ) {
+int pieces_cnt(int cz) {
 	
     WOCC = WK|WQ|WR|WB|WN|WP;
     BOCC = BK|BQ|BR|BB|BN|BP;
     OCC = WOCC|BOCC;
 	
-	U64 o = OCC;	//occupancies
-	int n = 0;
-	while(o) {
-		n++;
-		o &= o-1;
-		}
-	return Py_BuildValue( "i", n);
+	U64 o = (cz==0 ? OCC :(cz==1 ? WOCC : BOCC));	//occupancies
+	return bitCount(o);
+}
+
+PyObject *piecescount ( PyObject *self, PyObject *args ) {
+	return Py_BuildValue( "i", pieces_cnt(0));
+}
+PyObject *whitecount ( PyObject *self, PyObject *args ) {
+	return Py_BuildValue( "i", pieces_cnt(1));
+}
+PyObject *blackcount ( PyObject *self, PyObject *args ) {
+	return Py_BuildValue( "i", pieces_cnt(2));
 }
 
 PyObject *materialdiff ( PyObject *self, PyObject *args ) {
@@ -627,6 +701,8 @@ static PyMethodDef methods[] = {
 	{ "setfen", setfen, METH_VARARGS, "Set the chess position by FEN." },
 	{ "movegen", movegen, METH_VARARGS, "Force resources consuming legal chess moves generator routine." },
 	{ "legalmoves", legalmoves, METH_VARARGS, "To display legal chess moves generated now." },
+	{ "sidetomove", sidetomove, METH_VARARGS, "Side to move 0-white,1-black" },
+	{ "swaptomove", swaptomove, METH_VARARGS, "Swap side to move" },
 	{ "ucimove", ucimove, METH_VARARGS, "Perform an uci move on chess board." },
 	{ "undomove", undomove, METH_VARARGS, "Undo the last move. Also iterations." },
 	{ "parsepgn", parsepgn, METH_VARARGS, "Parse PGN and perform moves. Returns uci string." },
@@ -644,9 +720,12 @@ static PyMethodDef methods[] = {
 	{ "getoccupancies", getoccupancies, METH_VARARGS, "Get variables of board occupancies into tuples." },
 	{ "getoccupanciesU64", getoccupanciesU64, METH_VARARGS, "getoccupancies all into unsigned long long  (fast)" },
 	{ "piecescount", piecescount, METH_VARARGS, "Get count of pieces." },
+	{ "whitecount", whitecount, METH_VARARGS, "Get count of white pieces." },
+	{ "blackcount", blackcount, METH_VARARGS, "Get count of black pieces." },
 	{ "materialdiff", materialdiff, METH_VARARGS, "To indicate material difference, not 0." },
 	{ "uniq", uniq, METH_VARARGS, "Get 70 bytes unique string of position." },
 	{ "setasuniq", setasuniq, METH_VARARGS, "Set position as unig string." },
+	{ "seemslegitpos", seemslegitpos, METH_VARARGS, "Verify chess position normality" },
 	{ "freaknow", freaknow, METH_VARARGS, "C route sample returns occupancy of white king." },
 	{ NULL, NULL, 0, NULL }
 };
